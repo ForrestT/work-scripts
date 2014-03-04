@@ -1,3 +1,14 @@
+"""
+Meant to pull required info from ASA syslogs and provide summary info
+
+Relevent Syslog IDs:
+	5-713049 	VPN - Security Negotiation Complete
+	6-302013	TCP - Built connection
+	6-302014	TCP - Teardown connection
+	6-302015	UDP - Built connection
+	6-302016	UDP - Teardown connection
+"""
+
 import argparse, os
 
 def get_files_from_dir(path):
@@ -20,6 +31,11 @@ def build_dict(dct, key, value):
 	else:
 		dct[key] = [value]
 
+def get_ip_and_port(snippet):
+	tmp = snippet[snippet.index(':') + 1:].split('/')
+	return tmp
+
+
 parser = argparse.ArgumentParser()
 
 group1 = parser.add_mutually_exclusive_group()
@@ -38,7 +54,8 @@ if args.vpn:
 	vpn_s_d = {}
 	vpn_c_d = {}
 if args.inet:
-	inet_d = {}
+	inet_out_d = {}
+	inet_in_d = {}
 
 for f in files:
 	print '\nProcessing: %s' % f
@@ -46,7 +63,7 @@ for f in files:
 		prev_time, prev_id = '',''
 		for line in log:
 			if args.vpn:
-				if line.count('ASA-5-713049') != 0:
+				if 'ASA-5-713049' in line:
 					time = line[:15]
 					temp = line.split('Group = ')[1].split(', ')
 					if (time == prev_time) and (temp[0] == prev_id): continue
@@ -56,7 +73,17 @@ for f in files:
 						build_dict(vpn_s_d, temp[0], time)
 					prev_time, prev_id = time, temp[0]
 			if args.inet:
-				pass
+				if ('ASA-6-302013' or 'ASA-6-302015') in line:
+					temp = line.split('Built ')[1].split(' ')
+					direction = temp[0]
+					protocol = temp[1]
+					outside = get_ip_and_port(temp[5])
+					inside = get_ip_and_port(temp[8])
+					if direction == 'outbound':
+						build_dict(inet_out_d, inside[0], [outside[0], protocol, outside[1]])
+					elif direction == 'inbound':
+						build_dict(inet_in_d, inside[0], [outside[0], protocol, inside[1]])
+
 
 with open(args.output,'w') as f:
 	# Output File Header
@@ -64,24 +91,40 @@ with open(args.output,'w') as f:
 	for fi in files:
 		f.write('%s\n' % fi)
 	f.write('\n\n\n')
-	# Output Brief Summary
-	f.write('Brief Info - VPNs Last Use\n')
-	for key in vpn_s_d:
-		f.write('\t%s\n\t\tHits: %i\n\t\tLast Hit:%s\n' % (key, len(vpn_s_d[key]), vpn_s_d[key][-1]))
-	for key in vpn_c_d:
-		f.write('\t%s\n\t\tHits: %i\n\t\tLast Hit:%s\n' % (key, len(vpn_c_d[key]), vpn_c_d[key][-1][0]))
-	f.write('\n\n\n')
-	# Output All Site-2-Site VPN Info, unless --brief flag is set
-	if args.brief == False:
-		f.write('Detailed Info - All entries from all VPNs\n')
+	if args.vpn:
+		# Output Brief Summary
+		f.write('Brief Info - VPNs Last Use\n')
 		for key in vpn_s_d:
-			f.write('\n%s - hits: %i\n' % (key, len(vpn_s_d[key])))
-			for time in vpn_s_d[key]:
-				f.write('\t%s\n' % time)
-		# Output All Client VPN Info
+			f.write('\t%s\n\t\tHits: %i\n\t\tLast Hit:%s\n' % (key, len(vpn_s_d[key]), vpn_s_d[key][-1]))
 		for key in vpn_c_d:
-			f.write('\n%s - hits: %i\n' % (key, len(vpn_c_d[key])))
-			for time in vpn_c_d[key]:
-				f.write('\t%s , %s\n' % (time[0],time[1]))
+			f.write('\t%s\n\t\tHits: %i\n\t\tLast Hit:%s\n' % (key, len(vpn_c_d[key]), vpn_c_d[key][-1][0]))
+		f.write('\n\n\n')
+		# Output All Site-2-Site VPN Info, unless --brief flag is set
+		if args.brief == False:
+			f.write('Detailed Info - All entries from all VPNs\n')
+			for key in vpn_s_d:
+				f.write('\n%s - hits: %i\n' % (key, len(vpn_s_d[key])))
+				for time in vpn_s_d[key]:
+					f.write('\t%s\n' % time)
+			# Output All Client VPN Info
+			for key in vpn_c_d:
+				f.write('\n%s - hits: %i\n' % (key, len(vpn_c_d[key])))
+				for time in vpn_c_d[key]:
+					f.write('\t%s , %s\n' % (time[0],time[1]))
+			f.write('\n\n\n')
+	if args.inet:
+		f.write('Brief Info - Outbound Internet Connections\n')
+		for key in inet_out_d:
+			f.write('%s - Hits: %i\n' % (key, len(inet_out_d[key])))
+			for item in inet_out_d[key]:
+				f.write('\t%s\t%s/%s\n' % (item[0], item[1], item[2]))
+			#f.write('\t%s\t%s\t%s / %s\n' % (key, inet_out_d[key][0], inet_out_d[key][1], inet_out_d[key][2]))
+		f.write('Brief Info - Inbound Internet Connections\n')
+		for key in inet_in_d:
+			f.write('%s - Hits: %i\n' % (key, len(inet_in_d[key])))
+			for item in inet_in_d[key]:
+				f.write('\t%s\t%s/%s\n' % (item[0], item[1], item[2]))
+			#f.write('\t%s\t%s\t%s / %s\n' % (key, inet_in_d[key][0], inet_in_d[key][1], inet_in_d[key][2]))
 
-print 'done'
+
+print '\nOutput File Created: %s' % args.output
