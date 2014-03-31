@@ -77,7 +77,7 @@ def sort_into_list(line):
 		if name_seg[2] in ['cvg', 'ipt']:
 			voice_list.append(ip + '/32')
 			raw_list.append(format_raw(ip, name, 'voice'))
-		elif name_seg[2] in 'ons':
+		elif name_seg[2] in ['ons', 'dwdm']:
 			ons_list.append(ip + '/32')
 			raw_list.append(format_raw(ip, name, 'ons'))			
 		elif name_seg[2] in 'ucs':
@@ -113,11 +113,11 @@ for line in devices:
 		sort_into_list(line)
 
 #Writes out the IP addresses in the proper format for importing into ACS
-with open(site_code + '.txt', 'w') as f:
+with open('output\\' + site_code + '.txt', 'w') as f:
 	if len(data_list) > 0: output_ACS_format(f, data_list, 'Data')
 	if len(voice_list) > 0: output_ACS_format(f, voice_list, 'Voice')
 	if len(ucs_list) > 0: output_ACS_format(f, ucs_list, 'UCS')
-	if len(ons_list) > 0: output_ACS_format(f, ons_list, 'ONS')
+	if len(ons_list) > 0: output_ACS_format(f, ons_list, 'Optical')
 	if len(wifi_list) > 0: output_ACS_format(f, wifi_list, 'Wireless')
 	f.write('\n\n\n\nRaw Device List from source - %i hosts\n\n' % len(raw_list))
 	for d in raw_list:

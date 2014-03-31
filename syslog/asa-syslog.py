@@ -80,9 +80,9 @@ for f in files:
 					outside = get_ip_and_port(temp[5])
 					inside = get_ip_and_port(temp[8])
 					if direction == 'outbound':
-						build_dict(inet_out_d, inside[0], [outside[0], protocol, outside[1]])
+						build_dict(inet_out_d, inside[0], ','.join([outside[0], protocol, outside[1]]))
 					elif direction == 'inbound':
-						build_dict(inet_in_d, inside[0], [outside[0], protocol, inside[1]])
+						build_dict(inet_in_d, inside[0], ','.join([outside[0], protocol, inside[1]]))
 
 
 with open(args.output,'w') as f:
@@ -115,15 +115,15 @@ with open(args.output,'w') as f:
 	if args.inet:
 		f.write('Brief Info - Outbound Internet Connections\n')
 		for key in inet_out_d:
-			f.write('%s - Hits: %i\n' % (key, len(inet_out_d[key])))
-			for item in inet_out_d[key]:
-				f.write('\t%s\t%s/%s\n' % (item[0], item[1], item[2]))
+			f.write('\n%s - Total Hits: %i\n' % (key, len(inet_out_d[key])))
+			for item in set(inet_out_d[key]):
+				f.write('\t%s\tHits: %i\n' % (item, inet_out_d[key].count(item)))
 			#f.write('\t%s\t%s\t%s / %s\n' % (key, inet_out_d[key][0], inet_out_d[key][1], inet_out_d[key][2]))
 		f.write('Brief Info - Inbound Internet Connections\n')
 		for key in inet_in_d:
-			f.write('%s - Hits: %i\n' % (key, len(inet_in_d[key])))
-			for item in inet_in_d[key]:
-				f.write('\t%s\t%s/%s\n' % (item[0], item[1], item[2]))
+			f.write('\n%s - Total Hits: %i\n' % (key, len(inet_in_d[key])))
+			for item in set(inet_in_d[key]):
+				f.write('\t%s\tHits: %i\n' % (item, inet_in_d[key].count(item)))
 			#f.write('\t%s\t%s\t%s / %s\n' % (key, inet_in_d[key][0], inet_in_d[key][1], inet_in_d[key][2]))
 
 
