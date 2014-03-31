@@ -3,8 +3,8 @@ import socket, re, argparse
 
 parser = argparse.ArgumentParser()
 parser.add_argument('sitecode', help='Site Code that identifies the network')
-parser.add_argument('dataprefix', help='Prefix for data network: must be first two octects')
-parser.add_argument('voiceprefix', help='Prefix for voice network: must be first two octects')
+parser.add_argument('--dataprefix', '-d', help='Prefix for data network: must be first two octects')
+parser.add_argument('--voiceprefix', '-v', help='Prefix for voice network: must be first two octects')
 parser.add_argument('--filename', '-f', help='source filename conatining Cisco Works exported data')
 args = parser.parse_args()
 
@@ -16,16 +16,17 @@ else:
 	fname = 'C:\GitHub\work-scripts\ACS\Full Device Export With Site codes.csv'
 
 site_code = args.sitecode.lower()
+if args.dataprefix:
+	if args.dataprefix[-1:] == '.':
+		ip_prefix_data = args.dataprefix
+	else:
+		ip_prefix_data = args.dataprefix + '.'
 
-if args.dataprefix[-1:] == '.':
-	ip_prefix_data = args.dataprefix
-else:
-	ip_prefix_data = args.dataprefix + '.'
-
-if args.voiceprefix[-1:] == '.':		
-	ip_prefix_voice = args.voiceprefix
-else:
-	ip_prefix_voice = args.voiceprefix + '.'
+if args.voiceprefix:	
+	if args.voiceprefix[-1:] == '.':		
+		ip_prefix_voice = args.voiceprefix
+	else:
+		ip_prefix_voice = args.voiceprefix + '.'
 
 
 #Initializing lists and regex
@@ -105,8 +106,14 @@ with open(fname,'r') as f:
 
 #Sorts names-to-be-resolved and IP addresses into respective lists
 for line in devices:
-	a = ip_prefix_data in line[0]
-	b = ip_prefix_voice in line[0]
+	if args.dataprefix:
+		a = ip_prefix_data in line[0]
+	else:
+		a = False
+	if args.voiceprefix:
+		b = ip_prefix_voice in line[0]
+	else:
+		b = False
 	c = (site_code + '-') in line[0][:len(site_code) + 1]
 	d = site_code == line[-1].strip()
 	if a or b or c or d:
