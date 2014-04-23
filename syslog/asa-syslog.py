@@ -2,7 +2,8 @@
 Meant to pull required info from ASA syslogs and provide summary info
 
 Relevent Syslog IDs:
-	5-713049 	VPN - Security Negotiation Complete
+	5-713049 	VPN - IPsec Security Negotiation Complete
+	6-716001	WEBVPN - Webvpn session started (AnyConnect)
 	6-302013	TCP - Built connection
 	6-302014	TCP - Teardown connection
 	6-302015	UDP - Built connection
@@ -68,10 +69,17 @@ for f in files:
 					temp = line.split('Group = ')[1].split(', ')
 					if (time == prev_time) and (temp[0] == prev_id): continue
 					if temp[1][:8] == 'Username':
-						build_dict(vpn_c_d, temp[0], [time, temp[1]])
+						username = temp[1].split('Username = ')[1]
+						build_dict(vpn_c_d, temp[0], [time, username])
 					else:
 						build_dict(vpn_s_d, temp[0], time)
 					prev_time, prev_id = time, temp[0]
+				elif 'ASA-6-716001' in line:
+					time = line[:15]
+					temp = line.split('<')
+					groupname = temp[1].split('>')[0]
+					username = temp[2].split('>')[0]
+					build_dict(vpn_c_d, groupname, [time, username])
 			if args.inet:
 				if ('ASA-6-302013' or 'ASA-6-302015') in line:
 					temp = line.split('Built ')[1].split(' ')
