@@ -28,7 +28,8 @@ def get_file_list_from_args(arg):
 
 def build_dict(dct, key, value):
 	if key in dct:
-		dct[key].append(value)
+		if value not in dct[key]:
+			dct[key].append(value)
 	else:
 		dct[key] = [value]
 
@@ -54,6 +55,7 @@ files = get_file_list_from_args(args)
 if args.vpn:
 	vpn_s_d = {}
 	vpn_c_d = {}
+	vpn_u_d = {}
 if args.inet:
 	inet_out_d = {}
 	inet_in_d = {}
@@ -61,25 +63,27 @@ if args.inet:
 for f in files:
 	print '\nProcessing: %s' % f
 	with open(f, 'r') as log:
-		prev_time, prev_id = '',''
+		# prev_time, prev_id = '',''
 		for line in log:
 			if args.vpn:
 				if 'ASA-5-713049' in line:
 					time = line[:15]
 					temp = line.split('Group = ')[1].split(', ')
-					if (time == prev_time) and (temp[0] == prev_id): continue
+					# if (time == prev_time) and (temp[0] == prev_id): continue
 					if temp[1][:8] == 'Username':
 						username = temp[1].split('Username = ')[1]
 						build_dict(vpn_c_d, temp[0], [time, username])
+						build_dict(vpn_u_d, temp[0], username)
 					else:
 						build_dict(vpn_s_d, temp[0], time)
-					prev_time, prev_id = time, temp[0]
+					# prev_time, prev_id = time, temp[0]
 				elif 'ASA-6-716001' in line:
 					time = line[:15]
 					temp = line.split('<')
 					groupname = temp[1].split('>')[0]
 					username = temp[2].split('>')[0]
 					build_dict(vpn_c_d, groupname, [time, username])
+					build_dict(vpn_u_d, groupname, username)
 			if args.inet:
 				if ('ASA-6-302013' or 'ASA-6-302015') in line:
 					temp = line.split('Built ')[1].split(' ')
@@ -106,6 +110,11 @@ with open(args.output,'w') as f:
 			f.write('\t%s\n\t\tHits: %i\n\t\tLast Hit:%s\n' % (key, len(vpn_s_d[key]), vpn_s_d[key][-1]))
 		for key in vpn_c_d:
 			f.write('\t%s\n\t\tHits: %i\n\t\tLast Hit:%s\n' % (key, len(vpn_c_d[key]), vpn_c_d[key][-1][0]))
+		f.write('\n\n\nBrief Info - VPN User Summary\n')
+		for key in vpn_u_d:
+			f.write('\t%s - Unique Users: %i\n' % (key, len(vpn_u_d[key])))
+			for u in vpn_u_d[key]:
+				f.write('\t\t%s\n' % u)
 		f.write('\n\n\n')
 		# Output All Site-2-Site VPN Info, unless --brief flag is set
 		if args.brief == False:
