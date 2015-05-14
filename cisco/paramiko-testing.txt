@@ -1,0 +1,49 @@
+paramiko testing
+
+
+
+import paramiko
+
+ssh = paramiko.client.SSHClient()
+ssh.load_system_host_keys()
+ssh.set_missing_host_key_policy(paramiko.client.AutoAddPolicy())
+ssh.connect('dvlxmgt03', 22, 'itadmin', '[k33pitHID]')
+
+stdin, stdout, stderr = ssh.exec_command('ls -lh /var/log/asa')		#runs a command, then ends (can string commands together, or call a shell as that command, but still only one command)
+stdout.readlines()
+
+
+sftp = ssh.open_sftp()
+sftp.get('/var/log/asa/test.log', 'test.log')	#doesn't like wildcards
+
+
+
+shell = ssh.invoke_shell()
+
+output = shell.recv(1000)	#num of bytes to receive, arbitrrily chose 1000
+shell.send('cd /var/log/asa/n')
+output = shell.recv(1000)
+print(output)
+
+etc...
+
+
+
+*********helpful tips *********
+
+waiting for commands
+
+	import time
+	time.sleep(3)		# wait 3 seconds
+
+
+
+disable paging for the current session on cisco devices:	no --more-- prompts during output
+
+	shell.send('terminal length 0\n')
+
+get password interactively from cli
+
+	import getpass
+	pw = getpass.getpass()
+	

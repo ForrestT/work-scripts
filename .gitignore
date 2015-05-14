@@ -219,3 +219,7 @@ checkpoint/analysis.txt
 checkpoint/64.186.47.32-27.csv
 ACS/test-run.bat
 ACS/output/
+*.pcap
+cisco/portchannels/configs/
+cisco/ace/samples/
+*.conf
